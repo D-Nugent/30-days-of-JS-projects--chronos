@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CHRONOS</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <section class="side-menu">
+    <h1 class="primary-heading">
+      CHR🕔NOS
+    </h1>
+    <div class="statistics">
+      <p class="statistics__title --time-spent">
+        Time Worked:
+        <time class="statistics__value --time-spent">00:00:00</time>
+      </p>
+      <p class="statistics__title --time-forecasted">
+        Forecasted:
+        <time class="statistics__value --time-forecasted">00:00:00</time>
+      </p>
+      <h4 class="secondary-heading">
+        Task Statistics
+      </h4>
+      <ul class="tasks-list">
+        <li class="tasks-item --completed">
+          Completed:
+          <span class="tasks-item__value --completed">0</span>
+        </li>
+        <li class="tasks-item --in-progress">
+          In Progress:
+          <span class="tasks-item__value --in-progress">0</span>
+        </li>
+        <li class="tasks-item --outstanding">
+          Outstanding:
+          <span class="tasks-item__value --outstanding">0</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+  <main class="timers">
+    <h2 class="secondary-heading">Current Timers</h2>
+    <section class="timers__wrapper">
+      <ul class="timers__container">
+        <li class="timer-entry">
+          <h4 class="timer-entry__name">Name</h4>
+          <div class="timer-entry__info">
+            <div class="timer-entry__timing">
+              <time class="timer-entry__current-time">00:00:00</time>
+              /        
+              <time class="timer-entry__forecasted" datetime="PT1H30M0S">01:30:00</time>
+            </div>
+            <div class="timer-entry__actions">
+              <button class="timer-entry__toggle-start">▷</button>
+              <button class="timer-entry__complete-task">✔</button>
+            </div>
+          </div>
+        </li>
+      </ul>
+      <button class="add-entry">+ Add New Timer</button>
+    </section>
+    <aside class="modal">
+      <form class="new-timer">
+        <label for="timerName" class="new-timer__label">Timer Name
+          <input type="text" name="timerName" id="timerName" class="new-timer__field" required>
+        </label>
+        <label for="timerForecast" class="new-timer__label">Forecasted Time
+          <div class="new-timer__forecasted">
+            <input
+              name="timerHours" 
+              type="number" 
+              class="new-timer__field --time-forecasted" 
+              placeholder="HH" 
+              maxlength="2"
+              min="0"
+              required 
+            >
+            <span class="colon">:</span>
+            <input
+              name="timerMinutes" 
+              type="number" 
+              class="new-timer__field --time-forecasted" 
+              placeholder="MM" 
+              maxlength="2"
+              min="0"
+              max="59"
+              required 
+            >
+            <span class="colon">:</span>
+            <input
+              name="timerSeconds" 
+              type="number" 
+              class="new-timer__field --time-forecasted" 
+              placeholder="SS" 
+              maxlength="2"
+              min="0"
+              max="59"
+              required 
+            >
+          </div>
+        </label>
+        <div class="new-timer__buttons">
+          <button type="reset" class="new-timer__cancel">Cancel</button>
+          <button type="submit" class="new-timer__submit">Confirm</button>
+        </div>
+        <div class="new-timer__error">
+          There was an error with your timer, please try again. We found the following errors:
+          <ul class="new-timer__error-messages">
+          </ul>
+        </div>
+      </form>
+    </aside>
+  </main>
+  <script src="./utilities/timeConversions.js"></script>
+  <script src="./utilities/createNode.js"></script>
+  <script src="./utilities/makeTimer.js"></script>
+  <script src="./script.js"></script>
+</body>
+</html>
