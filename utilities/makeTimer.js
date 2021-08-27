@@ -17,7 +17,7 @@ const makeTimer = ({timerName,hours,minutes,seconds},logicNodes) => {
     get forecastedTime(){
       return this._forecastedTime;
     },
-    get forecastedTimeAsMilliseconds(){
+     get forecastedTimeAsMilliseconds(){
       const {hours,minutes,seconds} = this.forecastedTime;
       const hoursToMilliseconds = (hours * 60) * 60000;
       const minutesToMilliseconds = minutes * 60000;
@@ -46,6 +46,7 @@ const makeTimer = ({timerName,hours,minutes,seconds},logicNodes) => {
         hours: this._forecastedTime.hours,
         minutes: this._forecastedTime.minutes,
         seconds: this._forecastedTime.seconds,
+        timerCompleted: this._timerCompleted
       }
     },
     set timerNodes(nodes){
@@ -55,18 +56,21 @@ const makeTimer = ({timerName,hours,minutes,seconds},logicNodes) => {
       this._timerStartTime = 0;
       this._timerCurrentTime = 0;
       this.updateInterface();
-      const {timerToggleStart, timerCompleteTask} = this._timerNodes;
+      const {timerToggleStart, timerCompleteTask, timerDeleteTask} = this._timerNodes;
       const toggleTimer = this.toggleTimer;
       const completeTimerTask = this.completeTimerTask;
+      const deleteTimerTask = this.deleteTimerTask;
       timerToggleStart.addEventListener('click',toggleTimer.bind(this));
       timerToggleStart.addEventListener('transitionend',function(){this.classList.remove('--active')})
       timerCompleteTask.addEventListener('click',completeTimerTask.bind(this));
-      console.log('I ran setup');
+      timerCompleteTask.addEventListener('transitionend',function(){this.classList.remove('--active')})
+      timerDeleteTask.addEventListener('click',deleteTimerTask.bind(this));
     },
     initializeTimer(){
       this._timerStartTime = Date.now();
       this._timerStarted = true;
       this._timerPaused = false;
+      updateTaskStatistics();
     },
     toggleTimer(){
       if (this._timerPaused || !this._timerStartTime) {
@@ -120,10 +124,24 @@ const makeTimer = ({timerName,hours,minutes,seconds},logicNodes) => {
       timerCurrentTime.setAttribute('datetime',`PT${hoursPadded}H${minutesPadded}M${secondsPadded}S`);
       timerCurrentTime.textContent = `${hoursPadded}:${minutesPadded}:${secondsPadded}`;
       if (this._timerExceedsForecasted) timerCurrentTime.style.color = '#ff5666';
+      updateGlobalTimeWorked();
+    },
+    deleteTimerTask(){
+      const timerIndex = timerData.findIndex(timer => timer.configuration.timerName === this._timerName);
+      timerData.splice(timerIndex,1);
+      recursiveNodeDelete(timersContainer);
+      loadTimers(timerData);
+      console.log('task deleted');
     },
     completeTimerTask(){
       this._timerCompleted = true;
-    }
+      updateTaskStatistics();
+      const {timerListItem,timerToggleStart,timerCompleteTask} = this._timerNodes;
+      timerListItem.classList.add('--completed');
+      timerToggleStart.setAttribute('disabled','disabled');
+      timerCompleteTask.setAttribute('disabled','disabled');
+      console.log('marked as complete');
+    },
   })
 }
 
@@ -133,6 +151,7 @@ const getTimerMethods = (newTimer,logicNodes) => {
   const {
     completeTimerTask,
     configuration,
+    deleteTimerTask,
     duration,
     durationAsReadable,
     forecastedTime,
@@ -148,6 +167,7 @@ const getTimerMethods = (newTimer,logicNodes) => {
   const destructuredProperties = {
     completeTimerTask,
     configuration,
+    deleteTimerTask,
     duration,
     durationAsReadable,
     forecastedTime,

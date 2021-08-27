@@ -9,6 +9,12 @@ const timersContainer = document.querySelector('.timers__container');
 const timerStartBtns = document.querySelectorAll('.timer-entry__toggle-start');
 const timerCompleteBtns = document.querySelectorAll('.timer-entry__complete-task');
 const totalForecastedDisplay = document.querySelector('.statistics__value.--time-forecasted');
+const totalTimeWorkedDisplay = document.querySelector('.statistics__value.--time-spent');
+const taskStatistics = {
+  completed: document.querySelector('.tasks-item__value.--completed'),
+  inProgress: document.querySelector('.tasks-item__value.--in-progress'),
+  outstanding: document.querySelector('.tasks-item__value.--outstanding'),
+}
 
 // Event Listeners
 addtimer.addEventListener('click', toggleModal);
@@ -53,12 +59,16 @@ function addNewTimer(e){
   e.preventDefault();
   const form = e.target;
   const timerName = form.timerName.value;
-  const {timerHours:{value:hours},timerMinutes:{value:minutes},timerSeconds:{value:seconds}} = form;
+  let {timerHours:{value:hours},timerMinutes:{value:minutes},timerSeconds:{value:seconds}} = form;
+  hours = hours === ''?0:hours;
+  minutes = minutes === ''?0:minutes;
+  seconds = seconds === ''?0:seconds;
   const newTimer = {
     timerName,
     hours,
     minutes,
-    seconds
+    seconds,
+    timerCompleted: false,
   };
   validateForm(newTimer);
   if (isFormError) return;
@@ -67,37 +77,9 @@ function addNewTimer(e){
   toggleModal();
 }
 
-function buildTimerNodes(timerName,hours,minutes,seconds){
-  const timerListItem = createNode('li',[`timer-entry`,`--${timerName}`]);
-  const timerNameItem = createNode('h4',[`timer-entry__name`,`--${timerName}`],timerName);
-  const timerInfoWrapper = createNode('div',[`timer-entry__info`,`--${timerName}`]);
-  const timerTimingWrapper = createNode('div',[`timer-entry__timing`,`--${timerName}`]);
-  const timerCurrentTime = createNode('time',[`timer-entry__current-time`,`--${timerName}`],`00:00:00`);
-  const [hoursPadded,minutesPadded,secondsPadded] = getPaddedTime(hours,minutes,seconds);
-  const timerForecastTime = createNode(
-    'time',
-    [`timer-entry__forecasted`,`--${timerName}`],
-    `${hoursPadded}:${minutesPadded}:${secondsPadded}`
-    );
-  const timerActionsWrapper = createNode('div',[`timer-entry__actions`,`--${timerName}`]);
-  const timerToggleStart = createNode('button',[`timer-entry__toggle-start`,`--${timerName}`],'▷');
-  const timerCompleteTask = createNode('button',[`timer-entry__complete-task`,`--${timerName}`],'✔');
-  timerListItem.append(timerNameItem,timerInfoWrapper);
-  timerInfoWrapper.append(timerTimingWrapper,timerActionsWrapper);
-  timerTimingWrapper.append(timerCurrentTime,'/',timerForecastTime);
-  timerActionsWrapper.append(timerToggleStart,timerCompleteTask);
-
-  timersContainer.appendChild(timerListItem);
-  return logicNodes = {
-    timerCurrentTime,
-    timerToggleStart,
-    timerCompleteTask
-  }
-}
-
 function createTimer(newTimer,isNewTimer = true,index = 0){
-  const {timerName,hours,minutes,seconds} = newTimer; 
-  const logicNodes = buildTimerNodes(timerName,hours,minutes,seconds)
+  const {timerName,hours,minutes,seconds,timerCompleted} = newTimer; 
+  const logicNodes = buildTimerNodes(timerName,hours,minutes,seconds,timerCompleted)
   
   if(isNewTimer) {
     let timerSetup = makeTimer(newTimer,logicNodes);
@@ -105,36 +87,69 @@ function createTimer(newTimer,isNewTimer = true,index = 0){
     timerData[timerData.length] = timerSetup;
   } else {
     let newProperties = getTimerMethods(newTimer,logicNodes);
-    console.log(newProperties);
     Object.defineProperties(timerData[index],newProperties);
-    console.log(timerData[index]);
     timerData[index].timerNodes = logicNodes;
     timerData[index].setUpTimer();
   }
   updateGlobalForecast();
+  updateTaskStatistics();
+}
+
+function sumTimerValues(sumParameter){
+  return timerData.reduce((totalValue,currentTimer) => {
+    let adjustDuration = sumParameter === 'duration' && currentTimer._timerPaused ? '_timerPreviousTime':sumParameter;
+    return totalValue + currentTimer[adjustDuration];
+  },0)
 }
 
 function updateGlobalForecast(){
-  const globalForecast = timerData.reduce((totalForecast,currentTimer) => {
-    return totalForecast + currentTimer.forecastedTimeAsMilliseconds;
-  },0)
+  const globalForecast = sumTimerValues('forecastedTimeAsMilliseconds');
   globalForecasted = globalForecast;
-  const [hoursPadded,minutesPadded,secondsPadded] = getPaddedTime(globalForecast.hours,globalForecast.minutes,globalForecast.seconds);
-  console.log(totalForecastedDisplay);
+  const {hours,minutes,seconds} = convertMillisecondsToReadable(globalForecast)
+  const [hoursPadded,minutesPadded,secondsPadded] = getPaddedTime(hours,minutes,seconds);
   totalForecastedDisplay.setAttribute('datetime',`PT${hoursPadded}H${minutesPadded}M${secondsPadded}S`);
   totalForecastedDisplay.textContent = `${hoursPadded}:${minutesPadded}:${secondsPadded}`;
-  console.log(totalForecastedDisplay);
-  console.log(`hoursPadded`, hoursPadded)
-  console.log(`minutesPadded`, minutesPadded)
-  console.log(`secondsPadded`, secondsPadded)
-  console.log(convertMillisecondsToReadable(globalForecast));
+}
+
+function updateGlobalTimeWorked(){
+  const globalWorked = sumTimerValues('duration');
+  globalTimeWorked = globalWorked;
+  if (globalTimeWorked>globalForecasted) {
+    totalTimeWorkedDisplay.style.color = '#ff5666';
+  };
+  const {hours,minutes,seconds} = convertMillisecondsToReadable(globalWorked)
+  const [hoursPadded,minutesPadded,secondsPadded] = getPaddedTime(hours,minutes,seconds);
+  totalTimeWorkedDisplay.setAttribute('datetime',`PT${hoursPadded}H${minutesPadded}M${secondsPadded}S`);
+  totalTimeWorkedDisplay.textContent = `${hoursPadded}:${minutesPadded}:${secondsPadded}`;
+}
+
+function updateTaskStatistics(){
+  const defaultStats = {
+    completed: 0,
+    inProgress: 0,
+    outstanding: 0,
+  }
+  const statistics = timerData.reduce((statCount,currentTimer) => {
+    let status = 'outstanding';
+    if (currentTimer._timerCompleted) {
+      status = 'completed';
+    } else if (currentTimer._timerStarted) {
+      status ='inProgress';
+    }
+    statCount[status] += 1;
+    return statCount;
+  },defaultStats)
+  Object.entries(statistics).forEach(status => {
+    taskStatistics[status[0]].textContent = status[1]
+  })
 }
 
 function loadTimers(timers){
+  updateGlobalForecast();
   timers.forEach((timer,i) => {
     createTimer(timer.configuration,false,i);
-  })
-  updateGlobalForecast();
+  });
+  if (timers.length == 0) updateTaskStatistics();
 }
 
 function saveTimers(){
